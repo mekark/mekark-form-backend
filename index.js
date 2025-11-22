@@ -19,7 +19,7 @@ const PORT = process.env.PORT || 3000;
 
 // Enable CORS
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: ['https://www.mekark.com', 'http://localhost:5001'],
   credentials: true 
 }));
 app.use(express.json());
@@ -298,5 +298,6 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   connectDB();
 });
+
 
 
