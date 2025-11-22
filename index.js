@@ -18,7 +18,7 @@ const multers = multer({ storage });
 const PORT = process.env.PORT || 3000;
 
 // Enable CORS
-app.use(cors({origin : 'https://www.mekark.com'}));
+app.use(cors({origin : 'localhost:5173'}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(multers.single("resume"));
@@ -295,3 +295,4 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   connectDB();
 });
+
