@@ -1,36 +1,39 @@
 import express from "express";
 import { Resend } from "resend";
 import cors from "cors";
-import multer from "multer";
-import fs from "fs";
 import dotenv from "dotenv";
 
 // Load environment variables
 dotenv.config();
 
-const storage = multer.diskStorage({
-  destination: "uploads",
-});
-
 const app = express();
-const multers = multer({ storage });
 const PORT = process.env.PORT || 3000;
 
 // Enable CORS
-app.use(cors({
-  origin: 'https://www.mekark.com',
-  credentials: true 
-}));
+app.use(
+  cors({
+    origin: [
+      "https://www.revovest.in/",
+      "https://limegreen.studio",
+      "https://mekark.limegreenstudios.work",
+      "https://www.mekark.com",
+      "https://mekark.com",
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  }),
+);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(multers.single("resume"));
+// app.use(multers.single("resume"));
 
 // Initialize Resend
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Enquiry form endpoint
 app.post("/api/enquiry-form", async (req, res) => {
-  const { name, email, phone, select, message } = req.body;
+  const { name, email, phone, message, location, sqf, company } = req.body;
   try {
     const htmlContent = `
       <h2>Request for this Client</h2>
@@ -38,7 +41,9 @@ app.post("/api/enquiry-form", async (req, res) => {
         <tr><td><strong>Name:</strong></td><td>${name}</td></tr>
         <tr><td><strong>Email:</strong></td><td>${email}</td></tr>
         <tr><td><strong>Phone:</strong></td><td>${phone}</td></tr>
-        <tr><td><strong>Service:</strong></td><td>${select}</td></tr>
+        ${location ? `<tr><td><strong>Location:</strong></td><td>${location}</td></tr>` : ""}
+        ${sqf ? `<tr><td><strong>SQF:</strong></td><td>${sqf}</td></tr>` : ""}
+        ${company ? `<tr><td><strong>Company:</strong></td><td>${company}</td></tr>` : ""}
         <tr><td><strong>Message:</strong></td><td>${message}</td></tr>
       </table>
     `;
@@ -52,52 +57,6 @@ app.post("/api/enquiry-form", async (req, res) => {
     });
 
     res.status(200).json({ message: "Enquiry sent successfully!" });
-  } catch (error) {
-    console.error("Error sending email:", error);
-    res.status(500).json({ error: "Failed to send enquiry" });
-  }
-});
-
-// Career form endpoint
-app.post("/api/career-form", async (req, res) => {
-  const { name, email, phone, role, message } = req.body;
-  const file = req.file;
-
-  if (!file) {
-    return res.status(400).json({ error: "Resume file is required" });
-  }
-
-  try {
-    const htmlContent = `
-      <h2>Request for this Client</h2>
-      <table border="1" cellpadding="5" cellspacing="0">
-        <tr><td><strong>Name:</strong></td><td>${name}</td></tr>
-        <tr><td><strong>Email:</strong></td><td>${email}</td></tr>
-        <tr><td><strong>Phone:</strong></td><td>${phone}</td></tr>
-        <tr><td><strong>Role:</strong></td><td>${role}</td></tr>
-        <tr><td><strong>Message:</strong></td><td>${message}</td></tr>
-      </table>
-    `;
-
-    // Convert file to base64 for Resend attachment
-    const fileData = fs.readFileSync(file.path).toString("base64");
-
-    await resend.emails.send({
-      from: process.env.FROM_EMAIL,
-      to: process.env.TO_EMAIL,
-      subject: "New Career Form Submission",
-      html: htmlContent,
-      attachments: [
-        {
-          filename: file.originalname,
-          content: fileData,
-        },
-      ],
-      reply_to: email,
-    });
-
-    fs.unlinkSync(file.path); // cleanup
-    res.status(200).json({ message: "Career enquiry sent successfully!" });
   } catch (error) {
     console.error("Error sending email:", error);
     res.status(500).json({ error: "Failed to send enquiry" });
