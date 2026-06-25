@@ -60,9 +60,158 @@ function hasValue(value) {
   return String(value).trim().length > 0;
 }
 
-function fieldRow(label, value) {
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function fieldRow(label, value, { link } = {}) {
   if (!hasValue(value)) return "";
-  return `<tr><td><strong>${label}:</strong></td><td>${value}</td></tr>`;
+
+  const safe = escapeHtml(value);
+  let display = safe;
+  if (link === "email") {
+    display = `<a href="mailto:${safe}" style="color:#2563eb;text-decoration:none;">${safe}</a>`;
+  } else if (link === "phone") {
+    display = `<a href="tel:${safe.replace(/\s/g, "")}" style="color:#18181b;text-decoration:none;">${safe}</a>`;
+  }
+
+  return `
+    <tr>
+      <td style="padding:12px 0;border-bottom:1px solid #e4e4e7;color:#71717a;font-size:14px;width:140px;vertical-align:top;">${escapeHtml(label)}</td>
+      <td style="padding:12px 0;border-bottom:1px solid #e4e4e7;color:#18181b;font-size:14px;font-weight:600;vertical-align:top;">${display}</td>
+    </tr>`;
+}
+
+function emailSection(title, rowsHtml) {
+  if (!rowsHtml.trim()) return "";
+  return `
+    <tr>
+      <td style="padding:24px 32px 0;">
+        <p style="margin:0 0 12px;color:#71717a;font-size:11px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;">${escapeHtml(title)}</p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rowsHtml}</table>
+      </td>
+    </tr>`;
+}
+
+function buildEnquiryEmail({ formDomain, sourceName, fields }) {
+  const subtitle = sourceName && sourceName !== formDomain
+    ? `${escapeHtml(formDomain)} · ${escapeHtml(sourceName)}`
+    : escapeHtml(formDomain);
+
+  const contactRows = [
+    fieldRow("Name", fields.name),
+    fieldRow("Email", fields.email, { link: "email" }),
+    fieldRow("Phone", fields.phone, { link: "phone" }),
+  ].join("");
+
+  const projectRows = [
+    fieldRow("Project", sourceName),
+    fieldRow("Service", fields.service),
+    fieldRow("Start Timeline", fields.startTimeline),
+    fieldRow("Budget", fields.budget),
+    fieldRow("Location", fields.location),
+    fieldRow("SQF", fields.sqf),
+    fieldRow("Company", fields.company),
+    fieldRow("Industry", fields.industry),
+    fieldRow("Storage Type", fields.storageType),
+  ].join("");
+
+  const messageSection = hasValue(fields.message)
+    ? `
+    <tr>
+      <td style="padding:24px 32px 0;">
+        <p style="margin:0 0 12px;color:#71717a;font-size:11px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;">Message</p>
+        <div style="background:#f4f4f5;border-radius:8px;padding:16px;color:#18181b;font-size:14px;line-height:1.5;">${escapeHtml(fields.message)}</div>
+      </td>
+    </tr>`
+    : "";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:32px 16px;background:#f4f4f5;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:8px;overflow:hidden;">
+          <tr>
+            <td style="padding:32px 32px 24px;border-bottom:1px solid #e4e4e7;">
+              <table role="presentation" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="width:12px;vertical-align:middle;padding-right:10px;">
+                    <div style="width:10px;height:10px;background:#16a34a;border-radius:50%;"></div>
+                  </td>
+                  <td style="vertical-align:middle;">
+                    <h1 style="margin:0;color:#18181b;font-size:24px;font-weight:700;line-height:1.2;">New Enquiry</h1>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:8px 0 0;color:#71717a;font-size:14px;">${subtitle}</p>
+            </td>
+          </tr>
+          ${emailSection("Contact", contactRows)}
+          ${emailSection("Project Details", projectRows)}
+          ${messageSection}
+          <tr>
+            <td style="padding:24px 32px 32px;">
+              <p style="margin:0;color:#a1a1aa;font-size:12px;">Received via ${escapeHtml(formDomain)} enquiry form</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+function buildEnquiryText({ formDomain, sourceName, fields }) {
+  const lines = ["New Enquiry", ""];
+
+  if (sourceName && sourceName !== formDomain) {
+    lines.push(`${formDomain} · ${sourceName}`, "");
+  } else {
+    lines.push(formDomain, "");
+  }
+
+  const addSection = (title, entries) => {
+    const filled = entries.filter(([, value]) => hasValue(value));
+    if (!filled.length) return;
+    lines.push(title);
+    for (const [label, value] of filled) {
+      lines.push(`${label}: ${value}`);
+    }
+    lines.push("");
+  };
+
+  addSection("CONTACT", [
+    ["Name", fields.name],
+    ["Email", fields.email],
+    ["Phone", fields.phone],
+  ]);
+
+  addSection("PROJECT DETAILS", [
+    ["Project", sourceName],
+    ["Service", fields.service],
+    ["Start Timeline", fields.startTimeline],
+    ["Budget", fields.budget],
+    ["Location", fields.location],
+    ["SQF", fields.sqf],
+    ["Company", fields.company],
+    ["Industry", fields.industry],
+    ["Storage Type", fields.storageType],
+  ]);
+
+  if (hasValue(fields.message)) {
+    lines.push("MESSAGE", fields.message, "");
+  }
+
+  lines.push(`Received via ${formDomain} enquiry form`);
+  return lines.join("\n");
 }
 
 // Enquiry form endpoint
@@ -87,33 +236,32 @@ app.post("/api/enquiry-form", async (req, res) => {
   } = req.body;
   const formDomain = getFormDomain(req, sourceDomain || domain || source);
   const projectName = sourceName || formDomain;
-  try {
-    const htmlContent = `
-      <h2>Request for this Client</h2>
-      <table border="1" cellpadding="5" cellspacing="0">
-        <tr><td><strong>Website:</strong></td><td>${formDomain}</td></tr>
-        ${fieldRow("Project", sourceName)}
-        <tr><td><strong>Name:</strong></td><td>${name}</td></tr>
-        <tr><td><strong>Email:</strong></td><td>${email}</td></tr>
-        <tr><td><strong>Phone:</strong></td><td>${phone}</td></tr>
-        ${fieldRow("Location", location)}
-        ${fieldRow("SQF", sqf)}
-        ${fieldRow("Company", company)}
-        ${fieldRow("Industry", industry)}
-        ${fieldRow("Storage Type", storageType)}
-        ${fieldRow("Service", service)}
-        ${fieldRow("Start Timeline", startTimeline)}
-        ${fieldRow("Budget", budget)}
-        ${fieldRow("Message", message)}
-      </table>
-    `;
+  const fields = {
+    name,
+    email,
+    phone,
+    message,
+    location,
+    sqf,
+    company,
+    industry,
+    storageType,
+    startTimeline,
+    budget,
+    service,
+  };
 
-    // Send email using Resend API
+  try {
+    const emailPayload = { formDomain, sourceName, fields };
+    const htmlContent = buildEnquiryEmail(emailPayload);
+    const textContent = buildEnquiryText(emailPayload);
+
     const { data, error } = await resend.emails.send({
       from: process.env.FROM_EMAIL,
       to: process.env.TO_EMAIL,
       subject: `New Enquiry from ${projectName} (${formDomain})`,
       html: htmlContent,
+      text: textContent,
     });
 
     if (error) {
