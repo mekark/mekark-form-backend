@@ -55,6 +55,16 @@ function getFormDomain(req, bodyDomain) {
   return "Unknown";
 }
 
+function hasValue(value) {
+  if (value == null) return false;
+  return String(value).trim().length > 0;
+}
+
+function fieldRow(label, value) {
+  if (!hasValue(value)) return "";
+  return `<tr><td><strong>${label}:</strong></td><td>${value}</td></tr>`;
+}
+
 // Enquiry form endpoint
 app.post("/api/enquiry-form", async (req, res) => {
   const {
@@ -67,6 +77,9 @@ app.post("/api/enquiry-form", async (req, res) => {
     company,
     industry,
     storageType,
+    startTimeline,
+    budget,
+    service,
     domain,
     source,
     sourceDomain,
@@ -79,16 +92,19 @@ app.post("/api/enquiry-form", async (req, res) => {
       <h2>Request for this Client</h2>
       <table border="1" cellpadding="5" cellspacing="0">
         <tr><td><strong>Website:</strong></td><td>${formDomain}</td></tr>
-        ${sourceName ? `<tr><td><strong>Project:</strong></td><td>${sourceName}</td></tr>` : ""}
+        ${fieldRow("Project", sourceName)}
         <tr><td><strong>Name:</strong></td><td>${name}</td></tr>
         <tr><td><strong>Email:</strong></td><td>${email}</td></tr>
         <tr><td><strong>Phone:</strong></td><td>${phone}</td></tr>
-        ${location ? `<tr><td><strong>Location:</strong></td><td>${location}</td></tr>` : ""}
-        ${sqf ? `<tr><td><strong>SQF:</strong></td><td>${sqf}</td></tr>` : ""}
-        ${company ? `<tr><td><strong>Company:</strong></td><td>${company}</td></tr>` : ""}
-        ${industry ? `<tr><td><strong>Industry:</strong></td><td>${industry}</td></tr>` : ""}
-        ${storageType ? `<tr><td><strong>Storage Type:</strong></td><td>${storageType}</td></tr>` : ""}
-        ${message ? `<tr><td><strong>Message:</strong></td><td>${message}</td></tr>` : ""}
+        ${fieldRow("Location", location)}
+        ${fieldRow("SQF", sqf)}
+        ${fieldRow("Company", company)}
+        ${fieldRow("Industry", industry)}
+        ${fieldRow("Storage Type", storageType)}
+        ${fieldRow("Service", service)}
+        ${fieldRow("Start Timeline", startTimeline)}
+        ${fieldRow("Budget", budget)}
+        ${fieldRow("Message", message)}
       </table>
     `;
 
