@@ -66,6 +66,7 @@ app.post("/api/enquiry-form", async (req, res) => {
     sqf,
     company,
     industry,
+    storageType,
     domain,
     source,
     sourceDomain,
@@ -86,7 +87,8 @@ app.post("/api/enquiry-form", async (req, res) => {
         ${sqf ? `<tr><td><strong>SQF:</strong></td><td>${sqf}</td></tr>` : ""}
         ${company ? `<tr><td><strong>Company:</strong></td><td>${company}</td></tr>` : ""}
         ${industry ? `<tr><td><strong>Industry:</strong></td><td>${industry}</td></tr>` : ""}
-        <tr><td><strong>Message:</strong></td><td>${message}</td></tr>
+        ${storageType ? `<tr><td><strong>Storage Type:</strong></td><td>${storageType}</td></tr>` : ""}
+        ${message ? `<tr><td><strong>Message:</strong></td><td>${message}</td></tr>` : ""}
       </table>
     `;
 
