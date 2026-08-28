@@ -20,7 +20,6 @@ app.use(
       "https://www.mekark.com",
       "https://mekark.com",
       "https://factorybuildingmanufacturer.mekark.com",
-      "https://factorybuildingmanufacturer.mekark.com/?utm_source=Google_Adwords&utm_medium=Search_Ads&utm_campaign=Factories_17_03_2026&utm_term=AD1"
     ],
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -33,6 +32,9 @@ app.use(express.urlencoded({ extended: true }));
 
 // Initialize Resend
 const resend = new Resend(process.env.RESEND_API_KEY);
+
+const CAMPAIGN_URL =
+  "https://factorybuildingmanufacturer.mekark.com/?utm_source=Google_Adwords&utm_medium=Search_Ads&utm_campaign=Factories_17_03_2026&utm_term=AD1";
 
 function getFormDomain(req, bodyDomain) {
   if (bodyDomain) return bodyDomain;
@@ -56,15 +58,6 @@ function getFormDomain(req, bodyDomain) {
   }
 
   return "Unknown";
-}
-
-function getPageUrl(req, bodyUrl) {
-  if (hasValue(bodyUrl)) return String(bodyUrl).trim();
-
-  const referer = req.headers.referer;
-  if (hasValue(referer)) return String(referer).trim();
-
-  return "";
 }
 
 function hasValue(value) {
@@ -111,7 +104,7 @@ function emailSection(title, rowsHtml) {
     </tr>`;
 }
 
-function buildEnquiryEmail({ formDomain, sourceName, pageUrl, landingUrl, fields }) {
+function buildEnquiryEmail({ formDomain, sourceName, sourceUrl, fields }) {
   const subtitle = sourceName && sourceName !== formDomain
     ? `${escapeHtml(formDomain)} · ${escapeHtml(sourceName)}`
     : escapeHtml(formDomain);
@@ -135,8 +128,7 @@ function buildEnquiryEmail({ formDomain, sourceName, pageUrl, landingUrl, fields
   ].join("");
 
   const sourceRows = [
-    fieldRow("Page URL", pageUrl, { link: "url" }),
-    fieldRow("Landing URL", landingUrl, { link: "url" }),
+    fieldRow("Source URL", sourceUrl, { link: "url" }),
   ].join("");
 
   const messageSection = hasValue(fields.message)
@@ -189,7 +181,7 @@ function buildEnquiryEmail({ formDomain, sourceName, pageUrl, landingUrl, fields
 </html>`;
 }
 
-function buildEnquiryText({ formDomain, sourceName, pageUrl, landingUrl, fields }) {
+function buildEnquiryText({ formDomain, sourceName, sourceUrl, fields }) {
   const lines = ["New Enquiry", ""];
 
   if (sourceName && sourceName !== formDomain) {
@@ -227,8 +219,7 @@ function buildEnquiryText({ formDomain, sourceName, pageUrl, landingUrl, fields 
   ]);
 
   addSection("SOURCE", [
-    ["Page URL", pageUrl],
-    ["Landing URL", landingUrl],
+    ["Source URL", sourceUrl],
   ]);
 
   if (hasValue(fields.message)) {
@@ -336,19 +327,9 @@ app.post("/api/enquiry-form", async (req, res) => {
     source,
     sourceDomain,
     sourceName,
-    pageUrl,
-    sourceUrl,
-    landingUrl,
-    campaignUrl,
   } = req.body;
   const formDomain = getFormDomain(req, sourceDomain || domain || source);
   const projectName = sourceName || formDomain;
-  const submittedPageUrl = getPageUrl(req, pageUrl || sourceUrl);
-  const submittedLandingUrl = hasValue(landingUrl)
-    ? String(landingUrl).trim()
-    : hasValue(campaignUrl)
-      ? String(campaignUrl).trim()
-      : "";
   const fields = {
     name,
     email,
@@ -368,8 +349,7 @@ app.post("/api/enquiry-form", async (req, res) => {
     const emailPayload = {
       formDomain,
       sourceName,
-      pageUrl: submittedPageUrl,
-      landingUrl: submittedLandingUrl,
+      sourceUrl: CAMPAIGN_URL,
       fields,
     };
     const htmlContent = buildEnquiryEmail(emailPayload);
