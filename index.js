@@ -19,6 +19,8 @@ app.use(
       "https://mekark.limegreenstudios.work",
       "https://www.mekark.com",
       "https://mekark.com",
+      "https://factorybuildingmanufacturer.mekark.com",
+      "https://factorybuildingmanufacturer.mekark.com/?utm_source=Google_Adwords&utm_medium=Search_Ads&utm_campaign=Factories_17_03_2026&utm_term=AD1"
     ],
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -56,6 +58,15 @@ function getFormDomain(req, bodyDomain) {
   return "Unknown";
 }
 
+function getPageUrl(req, bodyUrl) {
+  if (hasValue(bodyUrl)) return String(bodyUrl).trim();
+
+  const referer = req.headers.referer;
+  if (hasValue(referer)) return String(referer).trim();
+
+  return "";
+}
+
 function hasValue(value) {
   if (value == null) return false;
   return String(value).trim().length > 0;
@@ -78,6 +89,8 @@ function fieldRow(label, value, { link } = {}) {
     display = `<a href="mailto:${safe}" style="color:#2563eb;text-decoration:none;">${safe}</a>`;
   } else if (link === "phone") {
     display = `<a href="tel:${safe.replace(/\s/g, "")}" style="color:#18181b;text-decoration:none;">${safe}</a>`;
+  } else if (link === "url") {
+    display = `<a href="${safe}" style="color:#2563eb;text-decoration:none;word-break:break-all;">${safe}</a>`;
   }
 
   return `
@@ -98,7 +111,7 @@ function emailSection(title, rowsHtml) {
     </tr>`;
 }
 
-function buildEnquiryEmail({ formDomain, sourceName, fields }) {
+function buildEnquiryEmail({ formDomain, sourceName, pageUrl, landingUrl, fields }) {
   const subtitle = sourceName && sourceName !== formDomain
     ? `${escapeHtml(formDomain)} · ${escapeHtml(sourceName)}`
     : escapeHtml(formDomain);
@@ -119,6 +132,11 @@ function buildEnquiryEmail({ formDomain, sourceName, fields }) {
     fieldRow("Company", fields.company),
     fieldRow("Industry", fields.industry),
     fieldRow("Storage Type", fields.storageType),
+  ].join("");
+
+  const sourceRows = [
+    fieldRow("Page URL", pageUrl, { link: "url" }),
+    fieldRow("Landing URL", landingUrl, { link: "url" }),
   ].join("");
 
   const messageSection = hasValue(fields.message)
@@ -156,6 +174,7 @@ function buildEnquiryEmail({ formDomain, sourceName, fields }) {
           </tr>
           ${emailSection("Contact", contactRows)}
           ${emailSection("Project Details", projectRows)}
+          ${emailSection("Source", sourceRows)}
           ${messageSection}
           <tr>
             <td style="padding:24px 32px 32px;">
@@ -170,7 +189,7 @@ function buildEnquiryEmail({ formDomain, sourceName, fields }) {
 </html>`;
 }
 
-function buildEnquiryText({ formDomain, sourceName, fields }) {
+function buildEnquiryText({ formDomain, sourceName, pageUrl, landingUrl, fields }) {
   const lines = ["New Enquiry", ""];
 
   if (sourceName && sourceName !== formDomain) {
@@ -205,6 +224,11 @@ function buildEnquiryText({ formDomain, sourceName, fields }) {
     ["Company", fields.company],
     ["Industry", fields.industry],
     ["Storage Type", fields.storageType],
+  ]);
+
+  addSection("SOURCE", [
+    ["Page URL", pageUrl],
+    ["Landing URL", landingUrl],
   ]);
 
   if (hasValue(fields.message)) {
@@ -312,9 +336,19 @@ app.post("/api/enquiry-form", async (req, res) => {
     source,
     sourceDomain,
     sourceName,
+    pageUrl,
+    sourceUrl,
+    landingUrl,
+    campaignUrl,
   } = req.body;
   const formDomain = getFormDomain(req, sourceDomain || domain || source);
   const projectName = sourceName || formDomain;
+  const submittedPageUrl = getPageUrl(req, pageUrl || sourceUrl);
+  const submittedLandingUrl = hasValue(landingUrl)
+    ? String(landingUrl).trim()
+    : hasValue(campaignUrl)
+      ? String(campaignUrl).trim()
+      : "";
   const fields = {
     name,
     email,
@@ -331,7 +365,13 @@ app.post("/api/enquiry-form", async (req, res) => {
   };
 
   try {
-    const emailPayload = { formDomain, sourceName, fields };
+    const emailPayload = {
+      formDomain,
+      sourceName,
+      pageUrl: submittedPageUrl,
+      landingUrl: submittedLandingUrl,
+      fields,
+    };
     const htmlContent = buildEnquiryEmail(emailPayload);
     const textContent = buildEnquiryText(emailPayload);
 
