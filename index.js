@@ -65,6 +65,40 @@ function hasValue(value) {
   return String(value).trim().length > 0;
 }
 
+function asHttpUrl(value) {
+  if (!hasValue(value)) return "";
+  const raw = String(value).trim();
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return "";
+    return raw;
+  } catch {
+    return "";
+  }
+}
+
+function getSourceUrl(req) {
+  const fromBody =
+    req.body.sourceUrl ||
+    req.body.pageUrl ||
+    req.body.frontendCampaignUrl ||
+    req.body.frontend_campaign_url ||
+    req.body.landingUrl ||
+    req.body.currentUrl;
+
+  const bodyUrl = asHttpUrl(fromBody);
+  if (bodyUrl) return bodyUrl;
+
+  const headerUrl = req.headers.referer || req.headers.origin;
+  if (!headerUrl) return "";
+
+  try {
+    return new URL(headerUrl).href;
+  } catch {
+    return String(headerUrl);
+  }
+}
+
 function escapeHtml(value) {
   return String(value)
     .replace(/&/g, "&amp;")
@@ -83,7 +117,7 @@ function fieldRow(label, value, { link } = {}) {
   } else if (link === "phone") {
     display = `<a href="tel:${safe.replace(/\s/g, "")}" style="color:#18181b;text-decoration:none;">${safe}</a>`;
   } else if (link === "url") {
-    display = `<a href="${safe}" style="color:#2563eb;text-decoration:none;word-break:break-all;">${safe}</a>`;
+    display = `<span style="word-break:break-all;overflow-wrap:anywhere;">${safe}</span>`;
   }
 
   return `
@@ -104,7 +138,7 @@ function emailSection(title, rowsHtml) {
     </tr>`;
 }
 
-function buildEnquiryEmail({ formDomain, sourceName, sourceUrl, fields }) {
+function buildEnquiryEmail({ formDomain, sourceName, sourceUrl, frontendCampaignUrl, fields }) {
   const subtitle = sourceName && sourceName !== formDomain
     ? `${escapeHtml(formDomain)} · ${escapeHtml(sourceName)}`
     : escapeHtml(formDomain);
@@ -129,6 +163,7 @@ function buildEnquiryEmail({ formDomain, sourceName, sourceUrl, fields }) {
 
   const sourceRows = [
     fieldRow("Source URL", sourceUrl, { link: "url" }),
+    fieldRow("Frontend Campaign URL", frontendCampaignUrl, { link: "url" }),
   ].join("");
 
   const messageSection = hasValue(fields.message)
@@ -181,7 +216,7 @@ function buildEnquiryEmail({ formDomain, sourceName, sourceUrl, fields }) {
 </html>`;
 }
 
-function buildEnquiryText({ formDomain, sourceName, sourceUrl, fields }) {
+function buildEnquiryText({ formDomain, sourceName, sourceUrl, frontendCampaignUrl, fields }) {
   const lines = ["New Enquiry", ""];
 
   if (sourceName && sourceName !== formDomain) {
@@ -220,6 +255,7 @@ function buildEnquiryText({ formDomain, sourceName, sourceUrl, fields }) {
 
   addSection("SOURCE", [
     ["Source URL", sourceUrl],
+    ["Frontend Campaign URL", frontendCampaignUrl],
   ]);
 
   if (hasValue(fields.message)) {
@@ -330,6 +366,7 @@ app.post("/api/enquiry-form", async (req, res) => {
   } = req.body;
   const formDomain = getFormDomain(req, sourceDomain || domain || source);
   const projectName = sourceName || formDomain;
+  const submittedFrontendCampaignUrl = getSourceUrl(req);
   const fields = {
     name,
     email,
@@ -350,6 +387,7 @@ app.post("/api/enquiry-form", async (req, res) => {
       formDomain,
       sourceName,
       sourceUrl: CAMPAIGN_URL,
+      frontendCampaignUrl: submittedFrontendCampaignUrl,
       fields,
     };
     const htmlContent = buildEnquiryEmail(emailPayload);
