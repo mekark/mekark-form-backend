@@ -65,18 +65,6 @@ function hasValue(value) {
   return String(value).trim().length > 0;
 }
 
-function asHttpUrl(value) {
-  if (!hasValue(value)) return "";
-  const raw = String(value).trim();
-  try {
-    const parsed = new URL(raw);
-    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return "";
-    return raw;
-  } catch {
-    return "";
-  }
-}
-
 function getSourceUrl(req) {
   const fromBody =
     req.body.sourceUrl ||
@@ -86,8 +74,7 @@ function getSourceUrl(req) {
     req.body.landingUrl ||
     req.body.currentUrl;
 
-  const bodyUrl = asHttpUrl(fromBody);
-  if (bodyUrl) return bodyUrl;
+  if (fromBody) return fromBody;
 
   const headerUrl = req.headers.referer || req.headers.origin;
   if (!headerUrl) return "";
@@ -95,7 +82,7 @@ function getSourceUrl(req) {
   try {
     return new URL(headerUrl).href;
   } catch {
-    return String(headerUrl);
+    return headerUrl;
   }
 }
 
