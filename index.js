@@ -151,6 +151,7 @@ function buildEnquiryEmail({ formDomain, sourceName, sourceUrl, fields }) {
   ].join("");
 
   const sourceRows = [
+    fieldRow("Enquiry Source Page", fields.sourcePage),
     fieldRow("Source URL", sourceUrl, { link: "url" }),
   ].join("");
 
@@ -242,6 +243,7 @@ function buildEnquiryText({ formDomain, sourceName, sourceUrl, fields }) {
   ]);
 
   addSection("SOURCE", [
+    ["Enquiry Source Page", fields.sourcePage],
     ["Source URL", sourceUrl],
   ]);
 
@@ -350,6 +352,7 @@ app.post("/api/enquiry-form", async (req, res) => {
     source,
     sourceDomain,
     sourceName,
+    sourcePage,
   } = req.body;
   const formDomain = getFormDomain(req, sourceDomain || domain || source);
   const projectName = sourceName || formDomain;
@@ -367,6 +370,7 @@ app.post("/api/enquiry-form", async (req, res) => {
     startTimeline,
     budget,
     service,
+    sourcePage,
   };
 
   try {
