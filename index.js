@@ -12,20 +12,6 @@ const PORT = process.env.PORT || 3000;
 // Enable CORS
 app.use(
   cors({
-    origin: [
-      "http://localhost:3000",
-      "https://www.revovest.in/",
-      "https://limegreen.studio",
-      "https://mekark.limegreenstudios.work",
-      "https://www.mekark.com",
-      "https://mekark.com",
-      "https://factorybuildingmanufacturer.mekark.com",
-      "https://peb.mekark.com",
-      "https://civilconstruction.mekark.com",
-      "https://mep.mekark.com",
-      "https://multistorey.mekark.com",
-      "https://warehouse.mekark.com",
-    ],
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
   }),
